@@ -105,8 +105,8 @@ module ActiveMerchant #:nodoc:
 
             add_field 'Ds_Merchant_MerchantCode', credentials[:commercial_id]
             add_field 'Ds_Merchant_Terminal', credentials[:terminal_id]
-            #add_field mappings[:transaction_type], '0' # Default Transaction Type
-            self.transaction_type = :authorization
+            add_field mappings[:transaction_type], '0' # Default Transaction Type
+            self.transaction_type = '0'
           end
 
           def add_field_sha256(name, value)

@@ -210,6 +210,7 @@ module ActiveMerchant #:nodoc:
 
           # Transform all current fields to a json object and apply base64 encoding without new lines.
           def encode_merchant_parameters
+            debugger
             Base64.urlsafe_encode64(fields.to_json)
           end
 

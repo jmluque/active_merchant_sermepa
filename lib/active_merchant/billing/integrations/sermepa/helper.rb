@@ -146,6 +146,7 @@ module ActiveMerchant #:nodoc:
 
           def language(lang)
             add_field mappings[:language], Sermepa.language_code(lang)
+            add_field mappings[:language], "001"
           end
 
           def transaction_type(type)

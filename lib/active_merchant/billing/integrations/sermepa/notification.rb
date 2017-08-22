@@ -66,6 +66,14 @@ module ActiveMerchant #:nodoc:
             params['ds_response']
           end
 
+          def merchant_identifier
+            params['ds_merchant_identifier']
+          end
+
+          def expiry_date
+            params['ds_expirydate']
+          end
+
           def error_message
             msg = Sermepa.response_code_message(response)
             response.to_s + ' - ' + (msg.nil? ? 'Operación Aceptada' : msg)
@@ -132,7 +140,7 @@ module ActiveMerchant #:nodoc:
 
           def xml_signed_fields
             params['ds_amount'] + params['ds_order'] + params['ds_merchantcode'] + params['ds_currency'] +
-                params['ds_response'] + params['ds_transactiontype'] + params['ds_securepayment']
+                params['ds_response'] + params['ds_transactiontype'] + params['ds_securepayment'] + params['ds_merchant_identifier']
           end
 
           def decoded_merchant_parameters

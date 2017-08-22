@@ -44,6 +44,8 @@ module ActiveMerchant #:nodoc:
             # Credentials should be set as a hash containing the fields:
             #  :terminal_id, :commercial_id, :secret_key, :key_type (optional)
             attr_accessor :credentials
+            attr_accessor :merchant_identifier
+            attr_accessor :merchant_directpayment
 
             def encrypt(key, data)
               block_length = 8
@@ -90,6 +92,9 @@ module ActiveMerchant #:nodoc:
           mapping :frequency,   'Ds_Merchant_DateFrecuency'
           mapping :expiry_date, 'Ds_Merchant_ChargeExpiryDate'
 
+          mapping :merchant_identifier, 'Ds_Merchant_Identifier'
+          mapping :merchant_directpayment, 'Ds_Merchant_DirectPayment'
+
           #### Special Request Specific Fields ####
           # SHA256 signature version
           mapping :signature_version, 'Ds_SignatureVersion'
@@ -100,12 +105,16 @@ module ActiveMerchant #:nodoc:
           # ammount should always be provided in cents!
           def initialize(order, account, options = {})
             self.credentials = options.delete(:credentials) if options[:credentials]
+            self.merchant_identifier = options.delete(:merchant_identifier) if options[:merchant_identifier]
+            self.merchant_directpayment = options.delete(:merchant_directpayment) if options[:merchant_directpayment]
             super(order, account, options)
             @fields_sha256 = {}
 
             add_field 'Ds_Merchant_MerchantCode', credentials[:commercial_id]
             add_field 'Ds_Merchant_Terminal', credentials[:terminal_id]
             add_field mappings[:transaction_type], '0' # Default Transaction Type
+            add_field 'Ds_Merchant_Identifier', self.merchant_identifier
+            add_field 'Ds_Merchant_DirectPayment', self.merchant_directpayment
             self.transaction_type = '0'
           end
 
@@ -124,7 +133,7 @@ module ActiveMerchant #:nodoc:
 
           def amount=(money)
             cents = money.respond_to?(:cents) ? money.cents : money
-            if money.is_a?(String) || cents.to_i <= 0
+            if money.is_a?(String) || cents.to_i < 0
               raise ArgumentError, 'money amount must be either a Money object or a positive integer in cents.'
             end
             add_field mappings[:amount], cents.to_i
@@ -144,6 +153,20 @@ module ActiveMerchant #:nodoc:
             add_field mappings[:currency], Sermepa.currency_code(value)
           end
 
+          def merchant_identifier
+            @merchant_identifier || self.class.merchant_identifier
+          end
+          def merchant_identifier=(value)
+            add_field mappings[:merchant_identifier], value
+          end
+
+          def merchant_directpayment
+            @merchant_directpayment || self.class.merchant_directpayment
+          end
+          def merchant_directpayment=(value)
+            add_field mappings[:merchant_directpayment], value
+          end
+
           def language(lang)
             add_field mappings[:language], Sermepa.language_code(lang)
             add_field mappings[:language], "001"
@@ -154,9 +177,13 @@ module ActiveMerchant #:nodoc:
           end
 
           def form_fields
+            fields['Ds_Merchant_Identifier'] = fields.delete('Ds_Merchant_Identifier')
+            fields['Ds_Merchant_DirectPayment'] = fields.delete('Ds_Merchant_DirectPayment')
+            # abort fields.inspect
             parameters = encode_merchant_parameters
             add_field_sha256 mappings[:signature_version], SHA256_SIGNATURE_VERSION
             add_field_sha256 mappings[:parameters], parameters
+            # abort Base64.urlsafe_decode64(parameters).inspect
             add_field_sha256 mappings[:signature], sign_request(parameters)
             @fields_sha256
           end
@@ -200,6 +227,8 @@ module ActiveMerchant #:nodoc:
               xml.DS_MERCHANT_TERMINAL credentials[:terminal_id]
               xml.DS_MERCHANT_MERCHANTCODE credentials[:commercial_id]
               xml.DS_MERCHANT_ORDER @fields['Ds_Merchant_Order']
+              xml.DS_MERCHANT_IDENTIFIER @fields['Ds_Merchant_Identifier']
+              xml.DS_MERCHANT_DIRECTPAYMENT @fields['Ds_Merchant_DirectPayment']
             end
           end
 
@@ -211,6 +240,7 @@ module ActiveMerchant #:nodoc:
 
           # Transform all current fields to a json object and apply base64 encoding without new lines.
           def encode_merchant_parameters
+            # fields["Ds_Merchant_Identifier"] = self.merchant_identifier
             Base64.urlsafe_encode64(fields.to_json)
           end
 
